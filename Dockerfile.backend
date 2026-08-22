@@ -1,0 +1,28 @@
+# Wraps the upstream Open Wearables backend image (built from the pinned tag by
+# the publish workflow) with the fixes a Railway deploy needs:
+#
+#   * the admin account is seeded and rotated from ADMIN_EMAIL / ADMIN_PASSWORD
+#     instead of falling back to the published defaults in app/config.py,
+#   * the API listens on the port Railway injects.
+ARG UPSTREAM=open-wearables-upstream:local
+FROM ${UPSTREAM}
+
+COPY railway/rotate_admin.py /railway/rotate_admin.py
+COPY railway/backend-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
+RUN chmod +x /usr/local/bin/railway-entrypoint.sh
+
+# Replace upstream's seed step (which silently falls back to admin@admin.com /
+# your-secure-password when the variables are absent) with one that requires the
+# variables, refuses the upstream default, and re-applies the password each boot.
+# The greps are assertions: if upstream restructures app.sh, the build fails here
+# rather than shipping stock seeding behaviour.
+RUN set -eux; \
+    cd /root_project; \
+    grep -q 'uv run python scripts/init/seed_admin.py' scripts/start/app.sh; \
+    grep -q 'uv run fastapi run app/main.py' scripts/start/app.sh; \
+    sed -i 's|uv run python scripts/init/seed_admin.py|uv run python /railway/rotate_admin.py|' scripts/start/app.sh; \
+    grep -q '/railway/rotate_admin.py' scripts/start/app.sh; \
+    ! grep -q 'scripts/init/seed_admin.py' scripts/start/app.sh
+
+WORKDIR /root_project
+EXPOSE 8000

@@ -1,0 +1,72 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  UPSTREAM_REPO: the-momentum/open-wearables
+  UPSTREAM_TAG: "0.7.0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out wrapper
+        uses: actions/checkout@v4
+
+      - name: Check out upstream at the pinned tag
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ env.UPSTREAM_TAG }}
+          path: upstream
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build upstream backend image
+        run: docker build -t open-wearables-upstream:local upstream/backend
+
+      - name: Build and push wrapper backend image
+        run: |
+          cp -r railway upstream/backend/railway
+          cp Dockerfile.backend upstream/backend/Dockerfile.railway
+          docker build \
+            -f upstream/backend/Dockerfile.railway \
+            -t ghcr.io/bon5co/open-wearables-railway:${UPSTREAM_TAG} \
+            -t ghcr.io/bon5co/open-wearables-railway:latest \
+            upstream/backend
+          docker push ghcr.io/bon5co/open-wearables-railway:${UPSTREAM_TAG}
+          docker push ghcr.io/bon5co/open-wearables-railway:latest
+
+      - name: Build upstream frontend image with the URL placeholder
+        run: |
+          docker build \
+            --build-arg VITE_API_URL=https://__OW_BACKEND_URL__ \
+            -t open-wearables-frontend-upstream:local \
+            upstream/frontend
+
+      - name: Build and push wrapper frontend image
+        run: |
+          cp -r railway upstream/frontend/railway
+          cp Dockerfile.frontend upstream/frontend/Dockerfile.railway
+          docker build \
+            -f upstream/frontend/Dockerfile.railway \
+            -t ghcr.io/bon5co/open-wearables-railway-frontend:${UPSTREAM_TAG} \
+            -t ghcr.io/bon5co/open-wearables-railway-frontend:latest \
+            upstream/frontend
+          docker push ghcr.io/bon5co/open-wearables-railway-frontend:${UPSTREAM_TAG}
+          docker push ghcr.io/bon5co/open-wearables-railway-frontend:latest

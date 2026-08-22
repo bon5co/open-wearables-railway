@@ -1,0 +1,18 @@
+# Wraps the upstream Open Wearables frontend image (built from the pinned tag by
+# the publish workflow).
+#
+# VITE_API_URL is substituted into the JavaScript bundle at BUILD time, so a
+# runtime variable cannot move it. The upstream image is therefore built with a
+# placeholder, and the entrypoint rewrites the placeholder to this deployment's
+# own backend URL on every boot — restoring a pristine copy first so the rewrite
+# is idempotent across redeploys, and failing closed if any placeholder survives.
+ARG UPSTREAM=open-wearables-frontend-upstream:local
+FROM ${UPSTREAM}
+
+COPY railway/frontend-entrypoint.sh /usr/local/bin/railway-entrypoint.sh
+RUN chmod +x /usr/local/bin/railway-entrypoint.sh \
+    && cp -a /app/.output /app/.output.pristine \
+    && grep -rl '__OW_BACKEND_URL__' /app/.output.pristine >/dev/null
+
+ENTRYPOINT ["/usr/local/bin/railway-entrypoint.sh"]
+CMD ["node", ".output/server/index.mjs"]
