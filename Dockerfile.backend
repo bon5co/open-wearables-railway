@@ -26,3 +26,17 @@ RUN set -eux; \
 
 WORKDIR /root_project
 EXPOSE 8000
+
+# Constants a Railway deploy would otherwise have to publish as template variables.
+# templateGenerate drops a literal defaultValue, so every literal published as a
+# variable becomes a blank required field on the deploy form — these are baked here
+# instead, leaving only the per-deployment values (hosts, secrets, URLs) as variables.
+ENV ENVIRONMENT=production \
+    SENTRY_ENABLED=false \
+    DB_USER=postgres \
+    DB_NAME=postgres \
+    DB_PORT=5432 \
+    REDIS_PORT=6379 \
+    REDIS_DB=0 \
+    REDIS_USERNAME=default \
+    ACCESS_TOKEN_EXPIRE_MINUTES=60
