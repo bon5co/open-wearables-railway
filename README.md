@@ -1,5 +1,9 @@
 # open-wearables-railway
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/open-wearables-or-just-updated-wearable-?referralCode=Z1xivh&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
+**Deploy on Railway:** [Open Wearables template](https://railway.com/deploy/open-wearables-or-just-updated-wearable-?referralCode=Z1xivh&utm_medium=integration&utm_source=template&utm_campaign=generic)
+
 Wrapper images for deploying [Open Wearables](https://github.com/the-momentum/open-wearables)
 (unified API for wearable health data — Garmin, Oura, Strava, Fitbit, Apple Health, Samsung
 Health and more) on Railway.
